@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>以图搜图 · 景夕网络科技</title>
+    <style>
+        :root {
+            --bg: #f0f2f5;
+            --primary: #4f6ef7;
+            --primary-hover: #3b54d4;
+            --text: #1a1a2e;
+            --text-secondary: #6b7280;
+            --border: #e5e7eb;
+            --danger: #ef4444;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { max-width: 900px; width: 100%; }
+        .brand { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 24px; }
+        .brand svg { width: 38px; height: 38px; background: linear-gradient(135deg, #4f6ef7, #7c3aed); border-radius: 10px; padding: 5px; }
+        .brand span { font-weight: 800; font-size: 1.2rem; color: var(--primary); letter-spacing: 2px; }
+        .header { text-align: center; margin-bottom: 16px; }
+        .header p { color: var(--text-secondary); font-size: 0.9rem; }
+        .card { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); }
+        .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); font-weight: 700; background: #fafbfc; border-radius: var(--radius) var(--radius) 0 0; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 16px 20px; }
+        .btn { padding: 11px 22px; border: none; border-radius: 25px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-sm { padding: 7px 15px; font-size: 0.8rem; border-radius: 18px; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+        .drop-zone { border: 2px dashed #d1d5db; border-radius: var(--radius); padding: 36px 24px; text-align: center; cursor: pointer; background: #fafbfc; position: relative; min-height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+        .drop-zone:hover, .drop-zone.drag-over { border-color: var(--primary); background: #eef1ff; }
+        .drop-zone .preview-overlay { position: absolute; top: 10px; right: 14px; background: var(--danger); color: #fff; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 5; }
+        .drop-zone img.preview { max-width: 260px; max-height: 200px; border-radius: var(--radius-sm); object-fit: contain; box-shadow: var(--shadow); border: 3px solid var(--primary); }
+        .search-result { display: flex; align-items: center; gap: 16px; padding: 16px; border-radius: 8px; border: 2px solid #e5e7eb; margin-bottom: 8px; }
+        .match-high { border-color: #10b981; background: #f0fdf6; }
+        .match-medium { border-color: #f59e0b; background: #fffdf0; }
+        .match-low { border-color: #d1d5db; background: #fafbfc; }
+        .score-badge { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; flex-shrink: 0; }
+        .score-high { background: #10b981; }
+        .score-medium { background: #f59e0b; }
+        .score-low { background: #9ca3af; }
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1a1a2e; color: #fff; padding: 12px 24px; border-radius: 25px; font-weight: 600; z-index: 400; }
+        .toast.success { background: #10b981; }
+        .toast.error { background: #ef4444; }
+        .search-hero { background: linear-gradient(135deg, #f0f4ff 0%, #e8eeff 40%, #f5f3ff 100%); border-radius: var(--radius); padding: 28px 24px; text-align: center; border: 1px solid #d8e0fb; }
+        .search-tabs { display: inline-flex; background: #fff; border-radius: 25px; border: 2px solid #e5e7eb; overflow: hidden; margin-bottom: 16px; }
+        .search-tabs .search-tab { padding: 10px 22px; cursor: pointer; font-weight: 600; font-size: 0.85rem; border: none; background: #fff; color: #6b7280; transition: all 0.2s; }
+        .search-tabs .search-tab.active { background: var(--primary); color: #fff; }
+        .search-tabs .search-tab:not(:last-child) { border-right: 2px solid #e5e7eb; }
+        .url-input-group { display: flex; gap: 8px; max-width: 680px; margin: 0 auto 10px; background: #fff; border-radius: 28px; border: 2px solid #e5e7eb; padding: 6px 6px 6px 18px; transition: border-color 0.2s; align-items: center; }
+        .url-input-group:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,110,247,0.1); }
+        .url-input-group input { flex: 1; border: none; outline: none; font-size: 0.9rem; background: transparent; min-width:0; }
+        .url-input-group .btn-search-go { border-radius: 24px; padding: 10px 22px; font-weight: 700; flex-shrink: 0; }
+        .drop-zone-inline { border: 2px dashed #d1d5db; border-radius: var(--radius); padding: 20px; text-align: center; cursor: pointer; background: #fafbfc; transition: all 0.2s; max-width: 680px; margin: 0 auto; position: relative; min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+        .drop-zone-inline:hover, .drop-zone-inline.drag-over { border-color: var(--primary); background: #eef1ff; }
+        .drop-zone-inline .preview-img-inline { max-width: 280px; max-height: 220px; border-radius: 8px; object-fit: contain; border: 3px solid var(--primary); box-shadow: var(--shadow); }
+        .drop-zone-inline .clear-preview-btn { position: absolute; top: 8px; right: 12px; background: var(--danger); color: #fff; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 0.8rem; z-index: 5; }
+        .result-stats-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; padding: 10px 14px; background: #f9fafb; border-radius: 8px; }
+        .empty-state { text-align: center; padding: 40px; color: var(--text-secondary); }
+        .empty-state .empty-icon { font-size: 3.5rem; display: block; margin-bottom: 10px; opacity: 0.4; }
+        .slider-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+        .slider-group input[type=range] { flex: 1; min-width: 120px; max-width: 200px; accent-color: var(--primary); }
+        .slider-group .slider-value { font-weight: 700; color: var(--primary); min-width: 40px; text-align: center; }
+        @media(max-width:768px) {
+            .container { padding: 0 10px; }
+            .url-input-group { padding: 4px 4px 4px 14px; border-radius: 22px; }
+            .url-input-group .btn-search-go { padding: 8px 16px; font-size: 0.8rem; }
+            .search-tabs .search-tab { padding: 8px 14px; font-size: 0.78rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 品牌标识 -->
+        <div class="brand">
+            <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 8 L12 28 Q12 34 20 34 Q28 34 28 28 L28 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="20" y1="14" x2="34" y2="30" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+                <line x1="34" y1="14" x2="20" y2="30" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <span>景夕网络科技</span>
+        </div>
+
+        <div class="header">
+            <p>上传图片或粘贴 URL，快速找到相似商品 · 按货号去重</p>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="search-hero">
+                    <div class="search-tabs" id="searchTabs">
+                        <button class="search-tab active" data-tab="url-mode">🔗 URL搜图</button>
+                        <button class="search-tab" data-tab="upload-mode">📷 本地上传</button>
+                    </div>
+
+                    <!-- URL 模式 -->
+                    <div id="urlModePanel">
+                        <div class="url-input-group">
+                            <span>🔗</span>
+                            <input type="text" id="urlInput" placeholder="粘贴商品图片URL...">
+                            <button class="btn btn-primary btn-search-go" id="btnUrlSearch">🔍 搜索</button>
+                        </div>
+                        <div id="searchHistoryTags" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:8px;"></div>
+                    </div>
+
+                    <!-- 上传模式 -->
+                    <div id="uploadModePanel" style="display:none;">
+                        <div class="drop-zone-inline" id="urlDropZone">
+                            <span>📷</span>
+                            <span>点击或拖拽图片到此处</span>
+                            <span style="font-size:0.7rem;color:#9ca3af;">支持 JPG/PNG/WebP</span>
+                            <img class="preview-img-inline" id="urlUploadPreview" style="display:none;" alt="预览">
+                            <button class="clear-preview-btn" id="urlClearPreview" style="display:none;">✕</button>
+                        </div>
+                        <input type="file" id="urlFileInput" accept="image/*" style="display:none;">
+                        <button class="btn btn-primary btn-sm" id="btnUrlUploadSearch" style="margin-top:10px;" disabled>🔍 开始搜索</button>
+                    </div>
+                </div>
+
+                <!-- 预览区 -->
+                <div id="urlPreviewContainer" style="margin-top:16px;text-align:center;"></div>
+
+                <!-- 结果区 -->
+                <div id="urlResultsContainer" style="margin-top:16px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (() => {
+            const SEARCH_FUNCTION_URL = 'https://dudcppazwqgkaeannrks.supabase.co/functions/v1/search-by-image';
+            const SEARCH_HISTORY_KEY = 'sku_image_search_history';
+            const MAX_HISTORY = 20;
+
+            let currentMode = 'url';
+            let uploadedImageData = null;
+            let allResults = [];
+            let similarityThreshold = 0;
+            let categoryFilter = '';
+
+            // ---------- 工具函数 ----------
+            function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+            function toast(m, t = '') { const el = document.createElement('div'); el.className = `toast ${t}`; el.textContent = m; document.body.appendChild(el); setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300) }, 2200); }
+
+            function getSearchHistory() { try { return JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY)) || []; } catch { return []; } }
+            function addSearchHistory(url) {
+                if (!url || !url.trim()) return;
+                let history = getSearchHistory().filter(h => h.url !== url);
+                history.unshift({ url, time: Date.now() });
+                if (history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
+                localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
+            }
+            function removeSearchHistory(url) {
+                let history = getSearchHistory().filter(h => h.url !== url);
+                localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
+            }
+            function clearHistory() { localStorage.removeItem(SEARCH_HISTORY_KEY); }
+
+            function renderHistoryTags() {
+                const history = getSearchHistory();
+                const container = document.getElementById('searchHistoryTags');
+                if (!container) return;
+                if (!history.length) {
+                    container.innerHTML = '<span style="font-size:0.73rem;color:#9ca3af;">暂无搜索历史</span>';
+                    return;
+                }
+                container.innerHTML = history.slice(0, 8).map(h => `
+                    <span class="history-tag" data-url="${esc(h.url)}" title="${esc(h.url)}" style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:16px;background:#fff;border:1px solid #e5e7eb;font-size:0.73rem;cursor:pointer;color:#6b7280;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                        ${esc(h.url.length > 35 ? h.url.substring(0, 35) + '...' : h.url)}
+                        <span class="hist-delete" data-url="${esc(h.url)}" style="cursor:pointer;opacity:0.5;">✕</span>
+                    </span>
+                `).join('') + (history.length > 8 ? `<span style="font-size:0.7rem;color:#9ca3af;">+${history.length - 8}条</span>` : '') + `
+                <button class="btn btn-sm" id="btnClearHistory" style="font-size:0.65rem;padding:3px 8px;background:#fee2e2;color:#dc2626;border:none;border-radius:12px;cursor:pointer;">清空</button>`;
+            }
+
+            // ---------- 图片处理 ----------
+            const loadFileToImg = f => new Promise((res, rej) => {
+                const r = new FileReader();
+                r.onload = e => { const img = new Image(); img.onload = () => res({ img, dataUrl: e.target.result }); img.onerror = rej; img.src = e.target.result; };
+                r.onerror = rej;
+                r.readAsDataURL(f);
+            });
+            const loadURLtoImg = u => new Promise((res, rej) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                const t = setTimeout(() => rej(new Error('加载超时')), 8000);
+                img.onload = () => { clearTimeout(t); res(img); };
+                img.onerror = () => { clearTimeout(t); rej(new Error('无法加载图片')); };
+                img.src = u;
+            });
+            const compressImg = (img, mw = 400) => {
+                const c = document.createElement('canvas');
+                let w = img.width, h = img.height;
+                if (w > mw) { h *= mw / w; w = mw; }
+                c.width = w; c.height = h;
+                c.getContext('2d').drawImage(img, 0, 0, w, h);
+                return c.toDataURL('image/jpeg', 0.85);
+            };
+
+            // ---------- 搜索与去重 ----------
+            async function searchByImage(imageFileOrUrl, threshold = 0.4) {
+                const form = new FormData();
+                if (typeof imageFileOrUrl === 'string') {
+                    form.append('url', imageFileOrUrl);
+                } else {
+                    form.append('image', imageFileOrUrl, 'search.jpg');
+                }
+                form.append('threshold', threshold);
+                const res = await fetch(SEARCH_FUNCTION_URL, { method: 'POST', body: form });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || '搜索失败');
+                return data;
+            }
+
+            function deduplicateByArticle(results) {
+                if (!results || !results.length) return [];
+                const map = new Map();
+                results.forEach(r => {
+                    const article = r.article_number || '';
+                    if (!article) {
+                        map.set(`__no_article_${r.id}`, r);
+                    } else {
+                        if (!map.has(article) || map.get(article).similarity < r.similarity) {
+                            map.set(article, r);
+                        }
+                    }
+                });
+                return Array.from(map.values()).sort((a, b) => b.similarity - a.similarity);
+            }
+
+            // ---------- 结果渲染 ----------
+            function renderResults(container, results) {
+                if (!results.length) {
+                    container.innerHTML = '<div class="empty-state"><span class="empty-icon">🤷</span>未找到相似商品</div>';
+                    return;
+                }
+                const highCount = results.filter(r => r.bestResult.total >= 0.75).length;
+                const mediumCount = results.filter(r => r.bestResult.total >= 0.45 && r.bestResult.total < 0.75).length;
+                let html = `
+                    <div class="result-stats-bar">
+                        <span>找到 <strong>${results.length}</strong> 个相似SKU（已去重）</span>
+                        <span style="font-size:0.78rem;">
+                            <span class="quick-match-badge" style="background:#d1fae5;color:#065f46;padding:3px 10px;border-radius:12px;font-size:0.7rem;">🟢 高相似 ${highCount}</span>
+                            <span class="quick-match-badge" style="background:#fef3c7;color:#92400e;margin-left:4px;padding:3px 10px;border-radius:12px;font-size:0.7rem;">🟡 中相似 ${mediumCount}</span>
+                        </span>
+                    </div>
+                    <div class="slider-group">
+                        <span>🎚️ 最低相似度：</span>
+                        <input type="range" id="simThreshold" min="0" max="100" value="${Math.round(similarityThreshold * 100)}" step="5">
+                        <span class="slider-value" id="simValue">${Math.round(similarityThreshold * 100)}%</span>
+                        <button class="btn btn-sm" id="btnResetFilter" style="background:#f0f2f5;font-size:0.7rem;">↺ 重置</button>
+                    </div>
+                `;
+
+                const categories = [...new Set(results.map(r => r.sku.category).filter(Boolean))].sort();
+                if (categories.length) {
+                    html += `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+                        <button class="filter-btn active" data-category="" style="padding:4px 12px;border-radius:20px;border:2px solid #e5e7eb;background:${categoryFilter === '' ? 'var(--primary)' : '#fff'};color:${categoryFilter === '' ? '#fff' : '#000'};cursor:pointer;font-size:0.8rem;">全部</button>
+                        ${categories.map(c => `<button class="filter-btn" data-category="${esc(c)}" style="padding:4px 12px;border-radius:20px;border:2px solid #e5e7eb;background:${categoryFilter === c ? 'var(--primary)' : '#fff'};color:${categoryFilter === c ? '#fff' : '#000'};cursor:pointer;font-size:0.8rem;">${esc(c)}</button>`).join('')}
+                    </div>`;
+                }
+
+                const filtered = results.filter(r => r.bestResult.total >= similarityThreshold && (!categoryFilter || r.sku.category === categoryFilter));
+                if (!filtered.length) {
+                    html += '<div class="empty-state"><span class="empty-icon">🔍</span>无匹配结果，请调整筛选条件</div>';
+                } else {
+                    html += filtered.map(({ bestResult, sku }) => {
+                        const totalPct = Math.round(bestResult.total * 100);
+                        const cls = bestResult.total >= 0.75 ? 'match-high score-high' : bestResult.total >= 0.45 ? 'match-medium score-medium' : 'match-low score-low';
+                        return `
+                            <div class="search-result ${cls.split(' ')[0]}">
+                                <img src="${sku.image_url || ''}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2272%22 height=%2272%22><rect fill=%22%23e5e7eb%22 width=%2272%22 height=%2272%22/></svg>'">
+                                <div style="flex:1;min-width:0;">
+                                    ${sku.article_number ? `<div style="font-weight:800;color:#e67e22;">📌 货号: ${esc(sku.article_number)}</div>` : ''}
+                                    <div><b>${esc(sku.sku_code)}</b> ${esc(sku.name)}</div>
+                                    <small>${esc(sku.category||'')} | 重量: ${esc(sku.responsible||'')}g</small>
+                                    <div><span style="font-size:0.7rem;color:#9ca3af;">相似度 ${totalPct}%</span></div>
+                                </div>
+                                <div class="score-badge ${cls.split(' ')[1]}">${totalPct}%</div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+                container.innerHTML = html;
+                bindFilterEvents();
+            }
+
+            function bindFilterEvents() {
+                const slider = document.getElementById('simThreshold');
+                const valueSpan = document.getElementById('simValue');
+                if (slider) {
+                    slider.addEventListener('input', () => {
+                        similarityThreshold = parseInt(slider.value) / 100;
+                        valueSpan.textContent = Math.round(similarityThreshold * 100) + '%';
+                        renderResults(document.getElementById('urlResultsContainer'), allResults);
+                    });
+                }
+                document.getElementById('btnResetFilter')?.addEventListener('click', () => {
+                    similarityThreshold = 0; categoryFilter = '';
+                    renderResults(document.getElementById('urlResultsContainer'), allResults);
+                });
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        categoryFilter = this.dataset.category;
+                        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                        this.classList.add('active');
+                        renderResults(document.getElementById('urlResultsContainer'), allResults);
+                    });
+                });
+            }
+
+            // ---------- UI 交互 ----------
+            function setMode(mode) {
+                currentMode = mode;
+                document.querySelectorAll('.search-tab').forEach(t => { t.classList.toggle('active', t.dataset.tab === mode); });
+                document.getElementById('urlModePanel').style.display = mode === 'url-mode' ? 'block' : 'none';
+                document.getElementById('uploadModePanel').style.display = mode === 'upload-mode' ? 'block' : 'none';
+                document.getElementById('urlResultsContainer').innerHTML = '';
+                document.getElementById('urlPreviewContainer').innerHTML = '';
+            }
+
+            // URL 搜索
+            async function performURLSearch(url) {
+                if (!url || !url.trim()) return toast('请输入图片URL', 'error');
+                const trimmedUrl = url.trim();
+                const previewContainer = document.getElementById('urlPreviewContainer');
+                previewContainer.innerHTML = '<p style="color:#6b7280;">⏳ 加载图片中...</p>';
+                document.getElementById('urlResultsContainer').innerHTML = '';
+                try {
+                    const img = await loadURLtoImg(trimmedUrl);
+                    const dataUrl = compressImg(img, 400);
+                    previewContainer.innerHTML = `<div><img src="${dataUrl}" style="max-width:260px;max-height:240px;border-radius:12px;border:3px solid var(--primary);"><br><small>✅ 搜索中...</small></div>`;
+                    const raw = await searchByImage(trimmedUrl);
+                    addSearchHistory(trimmedUrl);
+                    renderHistoryTags();
+                    const deduped = deduplicateByArticle(raw);
+                    allResults = deduped.map(r => ({
+                        bestResult: { total: r.similarity, structSim: r.similarity, colorSim: r.similarity, shapeSim: r.similarity },
+                        sku: r
+                    }));
+                    similarityThreshold = 0;
+                    categoryFilter = '';
+                    renderResults(document.getElementById('urlResultsContainer'), allResults);
+                } catch (e) {
+                    previewContainer.innerHTML = `<p style="color:#ef4444;">❌ ${e.message}</p>`;
+                }
+            }
+
+            // 上传搜索
+            async function handleUploadFile(file) {
+                if (!file || !file.type.startsWith('image/')) return;
+                const { img, dataUrl } = await loadFileToImg(file);
+                uploadedImageData = compressImg(img, 400);
+                document.getElementById('urlUploadPreview').src = uploadedImageData;
+                document.getElementById('urlUploadPreview').style.display = 'block';
+                document.getElementById('urlClearPreview').style.display = 'flex';
+                document.querySelectorAll('#urlDropZone span').forEach(s => s.style.display = 'none');
+                document.getElementById('btnUrlUploadSearch').disabled = false;
+            }
+
+            async function performUploadSearch() {
+                if (!uploadedImageData) return;
+                document.getElementById('urlPreviewContainer').innerHTML = `<div><img src="${uploadedImageData}" style="max-width:260px;max-height:240px;border-radius:12px;border:3px solid var(--primary);"><br><small>✅ 搜索中...</small></div>`;
+                document.getElementById('urlResultsContainer').innerHTML = '<p>🔎 深度搜索中...</p>';
+                try {
+                    const blob = await (await fetch(uploadedImageData)).blob();
+                    const raw = await searchByImage(blob);
+                    const deduped = deduplicateByArticle(raw);
+                    allResults = deduped.map(r => ({
+                        bestResult: { total: r.similarity, structSim: r.similarity, colorSim: r.similarity, shapeSim: r.similarity },
+                        sku: r
+                    }));
+                    similarityThreshold = 0;
+                    categoryFilter = '';
+                    renderResults(document.getElementById('urlResultsContainer'), allResults);
+                } catch (e) {
+                    document.getElementById('urlResultsContainer').innerHTML = `<p style="color:#ef4444;">❌ ${e.message}</p>`;
+                }
+            }
+
+            // ---------- 事件绑定 ----------
+            document.getElementById('searchTabs').addEventListener('click', e => {
+                const tab = e.target.closest('.search-tab');
+                if (tab) setMode(tab.dataset.tab);
+            });
+
+            document.getElementById('btnUrlSearch').addEventListener('click', () => performURLSearch(document.getElementById('urlInput').value));
+            document.getElementById('urlInput').addEventListener('keypress', e => { if (e.key === 'Enter') performURLSearch(e.target.value); });
+
+            document.getElementById('searchHistoryTags').addEventListener('click', e => {
+                if (e.target.classList.contains('hist-delete')) {
+                    removeSearchHistory(e.target.dataset.url);
+                    renderHistoryTags();
+                } else {
+                    const tag = e.target.closest('.history-tag');
+                    if (tag) {
+                        document.getElementById('urlInput').value = tag.dataset.url;
+                        performURLSearch(tag.dataset.url);
+                    }
+                }
+            });
+
+            document.getElementById('btnClearHistory')?.addEventListener('click', () => { clearHistory(); renderHistoryTags(); toast('历史已清空'); });
+
+            // 上传模式事件
+            const dropZone = document.getElementById('urlDropZone');
+            dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+            dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); if (e.dataTransfer.files[0]) handleUploadFile(e.dataTransfer.files[0]); });
+            dropZone.addEventListener('click', () => { if (!uploadedImageData) document.getElementById('urlFileInput').click(); });
+            document.getElementById('urlClearPreview').addEventListener('click', e => {
+                e.stopPropagation();
+                uploadedImageData = null;
+                document.getElementById('urlUploadPreview').src = ''; document.getElementById('urlUploadPreview').style.display = 'none';
+                document.getElementById('urlClearPreview').style.display = 'none';
+                document.querySelectorAll('#urlDropZone span').forEach(s => s.style.display = '');
+                document.getElementById('btnUrlUploadSearch').disabled = true;
+            });
+            document.getElementById('urlFileInput').addEventListener('change', () => { if (document.getElementById('urlFileInput').files[0]) handleUploadFile(document.getElementById('urlFileInput').files[0]); });
+            document.getElementById('btnUrlUploadSearch').addEventListener('click', performUploadSearch);
+
+            // 初始化
+            renderHistoryTags();
+            setMode('url-mode');
+        })();
+    </script>
+</body>
+</html>
